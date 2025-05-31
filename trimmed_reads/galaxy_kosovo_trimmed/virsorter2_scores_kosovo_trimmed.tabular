@@ -1,0 +1,8 @@
+seqname	dsDNAphage	NCLDV	RNA	ssDNA	lavidaviridae	max_score	max_score_group	length	hallmark	viral	cellular
+NODE_76_length_11046_cov_22.975343||full	nan	0.533	nan	nan	nan	0.533	NCLDV	9689	0	22.200	0.000
+NODE_103_length_2600_cov_25.789784||full	0.467	0.167	0.260	0.567	0.833	0.833	lavidaviridae	2382	0	66.700	0.000
+NODE_116_length_1355_cov_314.599231||full	0.840	nan	0.180	0.873	0.300	0.873	ssDNA	1262	0	100.000	0.000
+NODE_163_length_378_cov_1.052632||full	nan	0.587	nan	nan	nan	0.587	NCLDV	354	0	100.000	0.000
+NODE_110_length_1670_cov_14.169659||full	0.967	0.573	0.180	0.980	0.547	0.980	ssDNA	1308	0	100.000	0.000
+NODE_53_length_26502_cov_27.428820||0_partial	0.933	0.560	0.000	0.000	0.000	0.933	dsDNAphage	15425	2	27.300	9.100
+NODE_61_length_19660_cov_23.749707||0_partial	0.887	0.080	0.000	0.007	0.000	0.887	dsDNAphage	16133	2	20.700	31.000

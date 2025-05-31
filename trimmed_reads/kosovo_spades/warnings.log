@@ -1,0 +1,4 @@
+
+=== Error correction and assembling warnings:
+ * 0:00:00.009     1M / 8M    WARN    General                 (memory_limit.cpp          :  53)   Failed to limit memory to 16 Gb, setrlimit(2) call failed, errno = 22 (Invalid argument). Watch your memory consumption!
+======= Warnings saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_spades/warnings.log

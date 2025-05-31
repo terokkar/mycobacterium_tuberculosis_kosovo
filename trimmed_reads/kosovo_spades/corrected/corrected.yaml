@@ -1,0 +1,9 @@
+- "left reads":
+  - "/Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_spades/corrected/SRR33453552_trimmed_1P00.0_0.cor.fastq.gz"
+  "number": !!int "1"
+  "orientation": "fr"
+  "right reads":
+  - "/Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_spades/corrected/SRR33453552_trimmed_2P00.0_0.cor.fastq.gz"
+  "single reads":
+  - "/Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_spades/corrected/SRR33453552_trimmed__unpaired00.0_0.cor.fastq.gz"
+  "type": "paired-end"

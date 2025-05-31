@@ -1,0 +1,584 @@
+#Mycobacterium tuberculosis Genome Analysis of Antibiotic Resistant Genes and Phage Regions
+#Kosovo Assembly Report
+#May 31, 2025
+
+#This report was generated after taking Bioinformatics in spring 2025 at CSU Stanislaus. I worked on this independently, with tools used in and outside of class in order to streamline the genome cleanup and annotation workflow I developed in my final report on Mycobacterium marinum. The goal for this repository of Mycobacterium genome analyses is to have a somewhat shallow, bird's eye view of antibiotic resistant genes and phage regions across Mycobacterium species.
+#This report utilized command-line, web-based, and Python-based tools.
+
+#This file lists all tools and web resources used, along with their versions, for reproducibility.
+
+#Versions
+conda 23.7.4
+mamba 1.5.1
+Shell environment: zsh 5.9 (macOS Darwin 24.0)
+fasterq-dump : 3.2.1
+FastQC v0.12.1
+fastp 0.23.4
+Trimmomatic 0.39
+HISAT2 version 2.2.1
+SAMtools 1.21 (using HTSlib 1.21)
+SPAdes genome assembler v4.1.0
+QUAST v5.3.0
+barrnap 0.9
+bedtools v2.31.1
+NCBI BLASTn (web version; accessed May 2025)
+CheckM2 (Galaxy EU Version 1.0.2+galaxy1)
+Kraken2 (Galaxy EU Version 2.1.3+galaxy1)
+RAST (BV-BRC web version using BCV v3.49.1; accessed May 2025)
+RGI (Web portal – RGI 6.0.3, CARD 4.0.0)
+PathogenFinder 2 Version 0.5.0
+PHASTER (web version; accessed May 2025)
+virsorter, version 2.2.4
+Bandage Version: 0.9.0
+tabulate-0.9.0
+
+#The reads used in this report were downloaded from the NCBI Sequence Read Archive (SRA):
+https://www.ncbi.nlm.nih.gov/sra/SRX28693707
+
+#Here is the full text given on the NCBI SRA webpage (a screenshot of the webpage is included in this repository for reference):
+SRX28693707: WGS of M.tb from Kosovo 2021/2022
+1 ILLUMINA (Illumina NovaSeq 6000) run: 1M spots, 267.7M bases, 98Mb downloads
+
+Design: DNA isolated with boiling, standard protocol followed, 150 bp reads
+Submitted by: National Institute of Public Health of Kosovo
+Study: Whole Genome Sequencing of Clinical Samples from Kosovo (2021-2022) (PART 2), Mar 20 '25
+PRJNA1259726 • SRP583487 • All experiments • All runs
+hide Abstract
+Whole genome sequencing of M. tuberculosis isolates collected from patients in Kosovo 2021/2022
+Sample:
+SAMN48371228 • SRS24960478 • All experiments • All runs
+Organism: Mycobacterium tuberculosis
+Library:
+Name: 'ILL-Q13-RP0-PH4358
+Instrument: Illumina NovaSeq 6000
+Strategy: WGS
+Source: GENOMIC
+Selection: PCR
+Layout: PAIRED
+Runs: 1 run, 1M spots, 267.7M bases, 98Mb
+Run	# of Spots	# of Bases	Size	Published
+SRR33453552	1,035,431	267.7M	98Mb	2025-05-07
+
+ID: 38522294
+
+
+# ----------------------------- ~ ~ ~ ~ ~ Begin Report ~ ~ ~ ~ ~ -----------------------------
+
+
+#This command creates the folder 'kosovo_mtb' on the Desktop, downloads the paired-end reads for SRR33453552, and saves them to ~/Desktop/kosovo_mtb using 4 threads.
+mkdir ~/Desktop/kosovo_mtb
+fasterq-dump SRR33453552 --split-files --threads 4 --outdir ~/Desktop/kosovo_mtb
+
+#Terminal output after successful download of reads:
+spots read      : 1,035,431
+reads read      : 2,070,862
+reads written   : 2,070,862
+
+#file size check.
+$ ls -lh SRR33453552_*.fastq
+
+-rw-r--r--  1 [user]  staff   405M May 17 17:43 SRR33453552_1.fastq
+-rw-r--r--  1 [user]  staff   397M May 17 17:43 SRR33453552_2.fastq
+
+#This command creates the 'fastqc' folder (working in the kosovo_mtb folder),runs FastQC on both FASTQ files, and saves the reports to the fastqc folder.
+mkdir -p fastqc
+fastqc SRR33453552_1.fastq SRR33453552_2.fastq --outdir fastqc
+
+#FastQC results:
+#The forward reads show adapters but overall read quality is good.
+#The reverse reads have adapters as well and some drop in quality near the ends.
+
+#This command performs assembly of raw reads with SPAdes, using 8 threads, and sends resulting files to the folder 'spades_raw'.
+spades.py -1 SRR33453552_1.fastq -2 SRR33453552_2.fastq -o spades_raw --threads 8
+
+#The following commands perform 16S and 23S extraction with Barrnap and bedtools.
+
+#Predict rRNA features from the assembled genome (bacterial mode).
+barrnap --kingdom bac spades_raw/kosovo_raw.fasta > kosovo_rrna.gff
+
+#Separate 16S and 23S features into individual GFF files.
+grep "16S" kosovo_rrna.gff > kosovo_16s.gff
+grep "23S" kosovo_rrna.gff > kosovo_23s.gff
+
+#Extract the corresponding sequences using bedtools into .fasta files.
+bedtools getfasta -fi spades_raw/kosovo_raw.fasta -bed kosovo_16s.gff -s -fo kosovo_16s.fasta
+bedtools getfasta -fi spades_raw/kosovo_raw.fasta -bed kosovo_23s.gff -s -fo kosovo_23s.fasta
+
+#This command was used to create a folder called 'rRNA' to store all Barrnap and bedtools output files.
+mkdir rRNA
+mv kosovo_rrna.gff kosovo_16s.gff kosovo_23s.gff kosovo_16s.fasta kosovo_23s.fasta rRNA/
+
+#BLAST results:
+#16S rRNA BLASTn default settings: top hits include Mycobacterium bovis and Mycobacterium tuberculosis
+#23S rRNA BLASTn default settings: top hit is Mycobacterium tuberculosis
+
+#From the BLASTn results and consideration of the level of contamination in my previous MTB analyses, these reads seem to be relatively clean. Further analysis will be done to confirm.
+
+#This command runs QUAST on the raw assembly to generate basic assembly statistics and sends the resulting files to the folder quast_kosovo_raw.
+quast spades_raw/kosovo_raw.fasta -o quast_kosovo_raw
+
+#QUAST report:
+Assembly                    kosovo_raw
+# contigs (>= 0 bp)         501       
+# contigs (>= 1000 bp)      120       
+# contigs (>= 5000 bp)      80        
+# contigs (>= 10000 bp)     75        
+# contigs (>= 25000 bp)     53        
+# contigs (>= 50000 bp)     29        
+Total length (>= 0 bp)      4426767   
+Total length (>= 1000 bp)   4331756   
+Total length (>= 5000 bp)   4232358   
+Total length (>= 10000 bp)  4194068   
+Total length (>= 25000 bp)  3824577   
+Total length (>= 50000 bp)  2941839   
+# contigs                   150       
+Largest contig              216915    
+Total length                4353065   
+GC (%)                      65.46     
+N50                         79041     
+N90                         19673     
+auN                         90538.0   
+L50                         18        
+L90                         58        
+# N's per 100 kbp           30.55 
+
+#The total length (4,426,767 bp, including all contigs) is consistent with the accepted M. tuberculosis genome size (4.4 Mb according to RefSeq and GenBank), and the N50 of 79 kb indicates good contiguity for the raw assembly.
+
+#CheckM2 was run on the raw assembly using Galaxy EU.  
+#The report generated by CheckM2 supports the low level of contamination suspected after seeing the BLASTn results:
+- Completeness: 100%
+- Contamination: 0.81%
+
+#Kraken2 was used to generate a report of the organismal makeup of the genome via Galaxy EU.  
+#Some significant organisms present are:
+98.68	1021768	3502	G	1763	                Mycobacterium
+98.32	1018021	950696	G1	77643	                  Mycobacterium tuberculosis complex
+5.86	60640	49601	S	1773	                    Mycobacterium tuberculosis
+
+#There is Eurkayota contamination, including Homo sapiens:
+0.67	6934	222	D	2759	    Eukaryota
+0.65	6705	6705	S	9606	                                                              Homo sapiens
+
+#Additionally, Kraken2 picked up a small number of viral reads in the raw assembly:
+0	13	0	D	10239	  Viruses
+0	13	0	D1	2731341	    Duplodnaviria
+0	13	0	K	2731360	      Heunggongvirae
+0	13	0	P	2731618	        Uroviricota
+0	13	0	C	2731619	          Caudoviricetes
+0	12	10	G	2843450	            Sarumanvirus
+0	2	0	S	2843897	              Sarumanvirus bcepsauron
+0	2	2	S1	2530033	                Burkholderia phage BcepSauron
+0	1	0	C1	2788787	            unclassified Caudoviricetes
+0	1	1	S	2767577	              Burkholderia phage Magia
+
+#RAST web-based genome annotation was performed on the raw assembly to assess phage regions.
+
+#RAST Job Summary
+Job ID: 1612174
+Genome ID: 6666666.1451344
+Organism: Mycobacterium tuberculosis (Raw Assembly)
+Contigs: 517
+Genome Size: 4,425,437 bp
+Upload Date: 2025-05-26 14:55
+
+Phages, Prophages, Transposable elements, Plasmids (6)
+ └── Phages, Prophages (6)
+     └── Phage tail proteins (1)
+     └── Phage tail proteins 2 (1)
+     └── Phage capsid proteins (2)
+     └── Phage lysis modules (2)
+
+
+# ------------------------- Genome Analysis Part 2: Trimming and Final Downstream Analysis -------------------------
+
+
+#Initial trimming with default Trimmomatic and fastp settings failed to fully remove adapters and low-quality trailing bases, as confirmed by FastQC. These runs were excluded for clarity.
+
+#This command trims adapters and low-quality bases using Trimmomatic for paired-end reads.
+trimmomatic PE -threads 4 \
+  SRR33453552_1.fastq SRR33453552_2.fastq \
+  SRR33453552_1_paired.fq SRR33453552_1_unpaired.fq \
+  SRR33453552_2_paired.fq SRR33453552_2_unpaired.fq \
+  ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 \
+  LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+
+#This command trims adapters and filters low-quality reads using fastp for paired-end reads.
+fastp -i SRR33453552_1.fastq -I SRR33453552_2.fastq \
+  -o SRR33453552_trimmed_1.fq -O SRR33453552_trimmed_2.fq \
+  --detect_adapter_for_pe \
+  --thread 4 \
+  --html fastp_report.html --json fastp_report.json
+
+#Trimmomatic was used multiple times with changes to CROP, LEADING, TRAILING, and MINLEN, but fastp outperformed Trimmomatic and was used for final downstream analysis.
+
+~~~~~ fastp
+
+#The following commands create the folder 'kosovo_fastp', trim the pair-end reads, and sends the resulting trimmed reads to the kosovo_fastp folder.
+mkdir kosovo_fastp
+
+fastp \
+  -i SRR33453552_1.fastq \
+  -I SRR33453552_2.fastq \
+  -o kosovo_fastp/SRR33453552_trimmed_1P.fastq \
+  -O kosovo_fastp/SRR33453552_trimmed_2P.fastq \
+  --trim_front1 20 \
+  --trim_front2 20 \
+  --trim_tail1 5 \
+  --trim_tail2 5 \
+  -q 20 -u 30 -l 50 \
+  --html kosovo_fastp/fastp_kosovo.html \
+  --json kosovo_fastp/fastp_kosovo.json
+
+#Because this was done locally, and to avoid potential file corruption by the Cloud, fastp .html and FastQC .html files were generated and opened from Terminal.
+
+#View fastp report.
+open kosovo_fastp/fastp_kosovo.html
+
+#FastQC
+mkdir fastqc_kosovo
+
+fastqc -t 4 -o fastqc_kosovo --nogroup \
+  kosovo_fastp/SRR33453552_trimmed_1P.fastq \
+  kosovo_fastp/SRR33453552_trimmed_2P.fastq
+
+#View FastQC report.
+open fastqc_kosovo/SRR33453552_trimmed_1P_fastqc.html \
+     fastqc_kosovo/SRR33453552_trimmed_2P_fastqc.html
+
+#This fastp run was the most successful at removing adapters and low quality regions.
+#FastQC confirmed improved quality scores and complete removal of adapter sequences.
+
+#SPAdes
+mkdir kosovo_spades
+
+spades.py \
+  -1 SRR33453552_trimmed_1P.fastq \
+  -2 SRR33453552_trimmed_2P.fastq \
+  -o kosovo_spades \
+  -t 8
+
+#QUAST
+quast.py kosovo_spades/contigs.fasta -o kosovo_quast -t 8
+
+#16S and 23S
+mkdir kosovo_trim_rRNA
+
+barrnap --kingdom bac kosovo_spades/contigs.fasta > kosovo_trim_rRNA/rRNA_annotations.gff
+
+#Extract 16S
+grep "16S_rRNA" kosovo_trim_rRNA/rRNA_annotations.gff > kosovo_trim_rRNA/16S_only.gff
+bedtools getfasta -fi kosovo_spades/contigs.fasta -bed kosovo_trim_rRNA/16S_only.gff -fo kosovo_trim_rRNA/16S_rRNA.fasta
+
+#Extract 23S
+grep "23S_rRNA" kosovo_trim_rRNA/rRNA_annotations.gff > kosovo_trim_rRNA/23S_only.gff
+bedtools getfasta -fi kosovo_spades/contigs.fasta -bed kosovo_trim_rRNA/23S_only.gff -fo kosovo_trim_rRNA/23S_rRNA.fasta
+
+#Top BLASTn results for 16S rRNA and 23S rRNA were MTB.
+
+#This command downloaded Bandage into my current conda environment and created a visualization of the SPAdes De Brujin graph.
+conda create -n bandage -c bioconda -c conda-forge bandage
+conda activate bandage
+
+
+~~~~ HiSAT FILTER
+hisat2-build tb_reference.fna tb_index
+
+hisat2 -x tb_index -1 SRR33453552_trimmed_1P.fastq -2 SRR33453552_trimmed_2P.fastq -S aligned.sam --threads 8
+
+samtools view -bS aligned.sam | samtools sort -@ 8 -o aligned_sorted.bam
+
+samtools index aligned_sorted.bam
+
+samtools view -b -F 4 aligned_sorted.bam > mapped.bam
+
+mkdir -p kosovo_filter_fastqc
+fastqc mapped_1.fastq mapped_2.fastq --outdir kosovo_filter_fastqc
+
+#Note: mapped_1.fastq and mapped_2.fastq were successfully generated but contained very few reads and couldn't be assembled. Because Kraken2 reported lowered contamination, and CheckM2 reported lowered contamination and 100% completeness, I decided to move to final downstream analysis.
+~~~~
+
+
+#With trimmed assembly scaffolds, CARD RGI website was used to identify antibiotic resistant genes. The resulting .tar file was converted to .html and .json.
+tar -xvf kosovo_trimmed_CARD.tar
+
+#A Python script was used to generate a text-friendly summary table. This script (card_text_table.py) is located in the CARD folder within the trimmed_reads directory. The spacers generated in the original .txt friendly table were removed in final note editing.
+python card_text_table.py
+
+Gene:        qacG
+Drug Class:  disinfecting agents and antiseptics
+Mechanism:   antibiotic efflux
+Model:       protein homolog model
+% Identity:  40.0%
+Antibiotics: benzalkonium chloride
+
+Gene:        mfpA
+Drug Class:  fluoroquinolone antibiotic
+Mechanism:   antibiotic target protection
+Model:       protein homolog model
+% Identity:  100.0%
+Antibiotics: ciprofloxacin; levofloxacin;
+moxifloxacin; gatifloxacin; nalidixic
+acid; norfloxacin; sparfloxacin
+
+
+Gene:        putative nickel/cobalt transporter
+Drug Class:  fluoroquinolone antibiotic;
+aminoglycoside antibiotic; isoniazid-
+like antibiotic
+Mechanism:   antibiotic efflux
+Model:       protein homolog model
+% Identity:  100.0%
+Antibiotics: isoniazid; nalidixic acid; norfloxacin;
+ofloxacin; sparfloxacin; gentamicin
+
+
+Gene:        Rv1877
+Drug Class:  fluoroquinolone antibiotic
+Mechanism:   antibiotic efflux
+Model:       protein homolog model
+% Identity:  100.0%
+Antibiotics: levofloxacin; ofloxacin
+
+
+Gene:        Erm(37)
+Drug Class:  macrolide antibiotic; lincosamide
+antibiotic; streptogramin antibiotic;
+streptogramin A antibiotic;
+streptogramin B antibiotic
+Mechanism:   antibiotic target alteration
+Model:       protein homolog model
+% Identity:  100.0%
+Antibiotics: erythromycin; roxithromycin; lincomycin;
+telithromycin; clarithromycin;
+clindamycin; tylosin; spiramycin;
+azithromycin; dirithromycin;
+pristinamycin IA; quinupristin;
+virginiamycin M1; madumycin II;
+griseoviridin; dalfopristin;
+pristinamycin IB; virginiamycin S2;
+pristinamycin IC; vernamycin C; patricin
+A; patricin B; ostreogrycin B3;
+oleandomycin
+
+
+Gene:        RbpA
+Drug Class:  rifamycin antibiotic
+Mechanism:   antibiotic target protection
+Model:       protein homolog model
+% Identity:  91.9%
+Antibiotics: rifampin; rifaximin; rifabutin;
+rifapentine
+
+
+Gene:        blaC
+Drug Class:  cephalosporin; penicillin beta-lactam
+Mechanism:   antibiotic inactivation
+Model:       protein homolog model
+% Identity:  100.0%
+Antibiotics: cefoxitin; amoxicillin; cefalotin;
+temocillin; ticarcillin
+
+
+Gene:        efpA
+Drug Class:  rifamycin antibiotic; isoniazid-like
+antibiotic
+Mechanism:   antibiotic efflux
+Model:       protein homolog model
+% Identity:  100.0%
+Antibiotics: rifampin; isoniazid
+
+
+Gene:        AAC(2')-Ic
+Drug Class:  aminoglycoside antibiotic
+Mechanism:   antibiotic inactivation
+Model:       protein homolog model
+% Identity:  100.0%
+Antibiotics: dibekacin; netilmicin; tobramycin;
+6'-N-ethylnetilmicin; gentamicin
+
+
+#Pathogen Finder 2 (PathogenFinder2-0.5.0) predicted a high likelihood that the genome belongs to a human pathogen — which is expected, as it’s Mycobacterium tuberculosis. The corresponding .tsv can be found in the pathogen_finder2 folder.
+| Module     | Prediction     	                 |
+|------------|-----------------------------------|
+| Mean (std) | 0.9728 (0.0092) (Human Pathogenic)|
+
+#CheckM2 via Galaxy EU
+
+# CheckM2 Summary — Kosovo Assemblies
+| Metric               | kosovo_raw.fasta | kosovo_trim.fasta |
+|----------------------|------------------|-------------------|
+| Completeness (%)     | 100.0            | 100.0             |
+| Contamination (%)    | 0.81             | 0.79              |
+| Quality Score        | 0.896            | 0.899             |
+| Genome Size (bp)     | 4,426,767        | 4,379,513         |
+| Coding Sequences     | 79,041           | 65,853            |
+
+#CheckM2 reported slightly lower contamination, genome size, and coding sequences after trimming. The quality score improved. While the Kosovo SRA reads were already clean, fastp trimming did result in a modest improvement.
+
+#As part of gene annotation, the RAST web server was used first to look for phage regions.
+
+#RAST Job Summary
+Job ID: 1612176  
+Genome ID: 6666666.1451345  
+Organism: Mycobacterium tuberculosis (Trimmed Assembly)  
+Contigs: 356  
+Genome Size: 4,378,083 bp  
+Upload Date: 2025-05-26 15:00  
+
+Phages, Prophages, Transposable elements, Plasmids (5)
+ └── Phages, Prophages (5)
+     └── Phage lysis modules (1)
+     └── Phage tail proteins 2 (1)
+     └── Phage tail proteins (1)
+     └── Phage capsid proteins (2)
+
+#The trimmed assembly was uploaded to PHASTER for further phage region analysis. PHASTER identified 10 sequences with potential phage content:
+ZZ_624577643c NODE_1_length_196029_cov_24.617704
+ZZ_c340731ae6 NODE_2_length_158793_cov_23.173311
+ZZ_f6c9a2a9ef NODE_3_length_158493_cov_22.198765
+ZZ_76d2cb1adf NODE_4_length_158214_cov_22.694763
+ZZ_30d9e03791 NODE_5_length_141515_cov_23.085395
+ZZ_3a33f93c86 NODE_6_length_141030_cov_24.064515
+ZZ_bb6a2ae7ad NODE_7_length_119125_cov_23.377014
+ZZ_7541726c03 NODE_8_length_111108_cov_24.195015
+ZZ_79446459df NODE_9_length_104388_cov_22.997872
+ZZ_3c5327dbea NODE_10_length_97546_cov_23.675303
+
+#PHASTER detected incomplete phage regions on nodes 9 and 10. Results are available in the PHASTER folder within the trimmed reads section.
+
+#After reviewing the RAST .gff file, phage regions were identified on NODE_53 and NODE_61. These regions will be extracted and uploaded to PHASTER.
+
+#This command lists all phage regions in the RAST .gff file.
+grep -i phage kosovo_trimmed_rast.gff
+
+NODE_96_length_4472_cov_28.147159	FIG	CDS	3276	4103	.	ID=fig|6666666.1451345.peg.4323;Name=Phage endolysin
+NODE_9_length_104388_cov_22.997872	FIG	CDS	29190	30188	.	ID=fig|6666666.1451345.peg.4368;Name=Phage peptidoglycan binding endopeptidase
+(base) weeblesthe2nd@Mac RAST_trimmed % grep -i phage kosovo_trimmed_rast.gff
+
+NODE_16_length_79041_cov_21.549857	FIG	CDS	30275	30517	.	ID=fig|6666666.1451345.peg.679;Name=Phage tail tape measure protein
+NODE_21_length_65853_cov_23.533831	FIG	CDS	62516	63328	.	ID=fig|6666666.1451345.peg.1311;Name=Phage shock protein A (IM30)%2C suppresses sigma54-dependent transcription
+NODE_2_length_158793_cov_23.173311	FIG	CDS	50828	51586	.	ID=fig|6666666.1451345.peg.1919;Name=Phage protein
+NODE_31_length_53976_cov_24.475881	FIG	CDS	9556	10020	.	ID=fig|6666666.1451345.peg.2094;Name=Phage tail length tape-measure protein
+NODE_52_length_26777_cov_24.745640	FIG	CDS	12176	12433	.	ID=fig|6666666.1451345.peg.3260;Name=Phage protein
+NODE_53_length_26502_cov_27.428820	FIG	CDS	17147	17557	.	ID=fig|6666666.1451345.peg.3292;Name=Probable phiRV1 phage protein
+NODE_53_length_26502_cov_27.428820	FIG	CDS	18577	19998	.	ID=fig|6666666.1451345.peg.3296;Name=Phage major capsid protein
+NODE_53_length_26502_cov_27.428820	FIG	CDS	20006	20518	.	ID=fig|6666666.1451345.peg.3297;Name=PhiRv1 phage%2C prohead protease%2C HK97 family
+NODE_53_length_26502_cov_27.428820	FIG	CDS	20692	21162	.	ID=fig|6666666.1451345.peg.3298;Name=Phage terminase%2C small subunit
+NODE_53_length_26502_cov_27.428820	FIG	CDS	21243	21557	.	ID=fig|6666666.1451345.peg.3299;Name=Probable phiRv1 phage protein
+NODE_53_length_26502_cov_27.428820	FIG	CDS	21554	21826	.	ID=fig|6666666.1451345.peg.3300;Name=Probable phiRv1 phage protein
+NODE_53_length_26502_cov_27.428820	FIG	CDS	21840	22235	.	ID=fig|6666666.1451345.peg.3301;Name=Probable phiRv1 phage protein
+NODE_53_length_26502_cov_27.428820	FIG	CDS	22431	23846	.	ID=fig|6666666.1451345.peg.3303;Name=DNA primase%2C phage associated
+NODE_53_length_26502_cov_27.428820	FIG	CDS	23846	24244	.	ID=fig|6666666.1451345.peg.3304;Name=Probable phiRv1 phage protein
+NODE_53_length_26502_cov_27.428820	FIG	CDS	24241	24462	.	ID=fig|6666666.1451345.peg.3305;Name=Putative phiRv1 phage protein
+NODE_53_length_26502_cov_27.428820	FIG	CDS	24518	25033	.	ID=fig|6666666.1451345.peg.3306;Name=Putative phiRv1 phage protein
+NODE_61_length_19660_cov_23.749707	FIG	CDS	3949	4341	.	ID=fig|6666666.1451345.peg.3591;Name=Probable phiRv1 phage protein
+NODE_61_length_19660_cov_23.749707	FIG	CDS	5767	6012	.	ID=fig|6666666.1451345.peg.3593;Name=FIG050287: hypothetical phiRv2 prophage protein
+NODE_61_length_19660_cov_23.749707	FIG	CDS	6092	6415	.	ID=fig|6666666.1451345.peg.3594;Name=FIG040773: hypothetical phiRv2 prophage protein
+NODE_61_length_19660_cov_23.749707	FIG	CDS	6498	7073	.	ID=fig|6666666.1451345.peg.3595;Name=Phage terminase%2C small subunit
+NODE_61_length_19660_cov_23.749707	FIG	CDS	7199	7759	.	ID=fig|6666666.1451345.peg.3596;Name=PhiRv1 phage%2C prohead protease%2C HK97 family
+NODE_61_length_19660_cov_23.749707	FIG	CDS	7767	9206	.	ID=fig|6666666.1451345.peg.3597;Name=Phage major capsid protein
+NODE_61_length_19660_cov_23.749707	FIG	CDS	10094	11092	.	ID=fig|6666666.1451345.peg.3599;Name=Phage integrase
+NODE_96_length_4472_cov_28.147159	FIG	CDS	3276	4103	.	ID=fig|6666666.1451345.peg.4323;Name=Phage endolysin
+NODE_9_length_104388_cov_22.997872	FIG	CDS	29190	30188	.	ID=fig|6666666.1451345.peg.4368;Name=Phage peptidoglycan binding endopeptidase
+
+#This command creates a .txt file of all phage regions from the scaffolds.fasta file.
+grep -E "NODE_2_|NODE_9_|NODE_10_|NODE_16_|NODE_21_|NODE_31_|NODE_52_|NODE_53_|NODE_61_|NODE_96_" scaffolds.fasta > phage_headers.txt
+
+#phage_nodes.txt was created with the node names and their associated coverage:
+NODE_2_length_158793_cov_23.173311
+NODE_9_length_104388_cov_22.997872
+NODE_10_length_97546_cov_23.675303
+NODE_16_length_79041_cov_21.549857
+NODE_21_length_65853_cov_23.533831
+NODE_31_length_53976_cov_24.475881
+NODE_52_length_26777_cov_24.745640
+NODE_53_length_26502_cov_27.428820
+NODE_61_length_19660_cov_23.749707
+NODE_96_length_4472_cov_28.147159
+
+#The resulting `phage_nodes.fasta` file, containing 10 contigs flagged as phage regions by RAST, was uploaded to PHASTER for prophage region analysis.
+
+#PHASTER (note: only Mycobacterium phage hits are listed below to maintain organism-specific focus, but all results are saved within the PHASTER folder).
+
+#PHASTER Submission Results
+NODE_2_length_158793_cov_23.173311
+No phage were found in this sequence
+
+NODE_9_length_104388_cov_22.997872
+Mycobacterium phages: Omega
+Optimus
+Wanda
+Minerva
+Baka
+Completeness: Incomplete
+Score: 10
+Proteins: 9
+GC: 64.01%
+
+NODE_10_length_97546_cov_23.675303
+Mycobacterium phages: Adler
+Completeness: Incomplete
+Score: 20
+Proteins: 8
+GC: 64.71%
+
+NODE_16_length_79041_cov_21.549857
+No phage were found in this sequence
+
+NODE_21_length_65853_cov_23.533831
+No phage were found in this sequence
+
+NODE_31_length_53976_cov_24.475881
+No phage were found in this sequence
+
+NODE_52_length_26777_cov_24.745640
+No phage were found in this sequence
+
+NODE_53_length_26502_cov_27.428820
+Mycobacterium phages: Kratio
+Rey
+Collard
+Enkosi
+Larva
+Amelie
+PegLeg
+LastHope
+Bongo
+Completeness: Incomplete
+Score: 20
+Proteins: 11
+GC: 65.21%
+
+NODE_61_length_19660_cov_23.749707
+No phage were found in this sequence
+
+#VirSorter2 via Galaxy EU
+
+#VirSorter2 Results:
+Contig                                         Max Score  Hallmark Genes  Length (bp)  % Viral Genes  % Cellular Genes
+NODE_110_length_1670_cov_14.169659||full       0.980      0               1308         100.0           0.0
+NODE_53_length_26502_cov_27.428820||0_partial  0.933      2              15425          27.3           9.1
+NODE_61_length_19660_cov_23.749707||0_partial  0.887      2              16133          20.7          31.0
+
+#Nodes 53 and 61 have consistently appeared in RAST, PHASTER, and now VirSorter2, reinforcing the likelihood that they contain prophage regions.
+
+#CheckV
+#Unfortunately, CheckV could not be run due to a persistent database error. As a result, CheckV analysis is not included in this report.
+
+#RAST + CARD Annotation Comparison: NODE_52
+
+#RAST (phage region)
+NODE_52_length_26777_cov_24.745640
+
+#CARD
+NODE_52_length_26777_cov_24.745640_17 # 20343 # 20888 # 1 # ID=52_17;partial=00;start_type=GTG;rbs_motif=GGA/GAG/AGG;rbs_spacer=3-4bp;gc_cont=0.681	NODE_52_length_26777_cov_24.745640_17	20343	20888	+	Perfect	300	375.6	AAC(2')-Ic	100	3002525	protein homolog model	n/a	n/a	aminoglycoside antibiotic	antibiotic inactivation	AAC(2')	GTGCACACCCAGGTACACACGGCCCGCCTGGTCCACACCGCCGATCTTGACAGCGAGACCCGCCAGGACATCCGTCAGATGGTCACCGGCGCGTTTGCCGGTGACTTCACCGAGACCGACTGGGAGCACACGCTGGGTGGGATGCACGCCCTGATCTGGCATCACGGGGCGATCATCGCGCATGCCGCGGTGATCCAGCGGCGACTGATCTACCGCGGCAACGCGCTGCGCTGCGGGTACGTCGAAGGCGTTGCGGTGCGGGCGGACTGGCGGGGCCAACGCCTGGTGAGCGCGCTGTTGGACGCCGTCGAGCAGGTGATGCGCGGCGCTTACCAGCTCGGAGCGCTCAGTTCCTCGGCGCGGGCCCGCAGACTGTACGCCTCACGCGGCTGGCTGCCCTGGCACGGCCCGACATCGGTACTGGCACCAACCGGTCCAGTCCGTACACCCGATGACGACGGAACGGTGTTCGTCCTGCCCATCGACATCAGCCTGGACACCTCGGCGGAGCTGATGTGCGATTGGCGCGCGGGCGACGTCTGGTAA	MHTQVHTARLVHTADLDSETRQDIRQMVTGAFAGDFTETDWEHTLGGMHALIWHHGAIIAHAAVIQRRLIYRGNALRCGYVEGVAVRADWRGQRLVSALLDAVEQVMRGAYQLGALSSSARARRLYASRGWLPWHGPTSVLAPTGPVRTPDDDGTVFVLPIDISLDTSAELMCDWRAGDVW	MHTQVHTARLVHTADLDSETRQDIRQMVTGAFAGDFTETDWEHTLGGMHALIWHHGAIIAHAAVIQRRLIYRGNALRCGYVEGVAVRADWRGQRLVSALLDAVEQVMRGAYQLGALSSSARARRLYASRGWLPWHGPTSVLAPTGPVRTPDDDGTVFVLPIDISLDTSAELMCDWRAGDVW	100	gnl|BL_ORD_ID|1141|hsp_num:0	1246			0	543	dibekacin; netilmicin; tobramycin; 6'-N-ethylnetilmicin; gentamicin
+
+#Note: the CARD-identified resistance gene AAC(2')-Ic was found on NODE_52, which was also annotated by RAST as a phage-related region. While I am unable to make a definitive conclusion on this (as a n00by undergrad), this overlap raises the possibility that the resistance gene may be associated with a mobile phage element. Further experimental or comparative analysis would be needed to confirm any functional linkage.
+
+
+~ END ~
+
+
+#This marks the end of my first independently completed genome section and annotation report. Antibiotic resistant genes and phage regions were found and recorded. Interestingly, one antibiotic resistance area reported by CARD matched a phage region reported by RAST.
+
+La fin ~

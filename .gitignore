@@ -1,0 +1,10 @@
+*.fastq*
+*.fq*
+*.fasta*
+*.fa*
+*.fna*
+*.faa*
+*.gz
+*.bam
+*.sam
+*.vcf

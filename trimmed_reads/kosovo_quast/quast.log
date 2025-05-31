@@ -1,0 +1,66 @@
+/Users/weeblesthe2nd/miniconda3/envs/genomeanalysis/bin/quast.py kosovo_spades/contigs.fasta -o kosovo_quast -t 8
+
+Version: 5.3.0
+
+System information:
+  OS: macOS-15.5-x86_64-i386-64bit-Mach-O (macosx)
+  Python version: 3.13.2
+  CPUs number: 10
+
+Started: 2025-05-19 22:36:22
+
+Logging to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/quast.log
+WARNING: Maximum number of threads is reset to 1 to prevent the crash due to a known bug when using multi-threading in Python 3.8+ on macOS! For multi-threading please downgrade your Python to 3.7. Sorry for the inconvenience! Please find more details in https://github.com/ablab/quast/issues/175
+
+CWD: /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads
+Main parameters: 
+  MODE: default, threads: 1, min contig length: 500, min alignment length: 65, min alignment IDY: 95.0, \
+  ambiguity: one, min local misassembly length: 200, min extensive misassembly length: 1000
+
+Contigs:
+  Pre-processing...
+  kosovo_spades/contigs.fasta ==> contigs
+
+2025-05-19 22:36:22
+Running Basic statistics processor...
+  Contig files: 
+    contigs
+  Calculating N50 and L50...
+    contigs, N50 = 64415, L50 = 23, auN = 71398.5, Total length = 4342326, GC % = 65.48, # N's per 100 kbp =  0.00
+  Drawing Nx plot...
+    saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/basic_stats/Nx_plot.pdf
+  Drawing cumulative plot...
+    saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/basic_stats/cumulative_plot.pdf
+  Drawing GC content plot...
+    saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/basic_stats/GC_content_plot.pdf
+  Drawing contigs GC content plot...
+    saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/basic_stats/contigs_GC_content_plot.pdf
+  Drawing Coverage histogram (bin size: 1x)...
+    saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/basic_stats/coverage_histogram.pdf
+  Drawing contigs coverage histogram (bin size: 1x)...
+    saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/basic_stats/contigs_coverage_histogram.pdf
+Done.
+
+NOTICE: Genes are not predicted by default. Use --gene-finding or --glimmer option to enable it.
+
+2025-05-19 22:36:23
+Creating large visual summaries...
+This may take a while: press Ctrl-C to skip this step..
+  1 of 2: Creating PDF with all tables and plots...
+  2 of 2: Creating Icarus viewers...
+Done
+
+2025-05-19 22:36:23
+RESULTS:
+  Text versions of total report are saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/report.txt, report.tsv, and report.tex
+  Text versions of transposed total report are saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/transposed_report.txt, transposed_report.tsv, and transposed_report.tex
+  HTML version (interactive tables and plots) is saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/report.html
+  PDF version (tables and plots) is saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/report.pdf
+  Icarus (contig browser) is saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/icarus.html
+  Log is saved to /Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/kosovo_quast/quast.log
+
+Finished: 2025-05-19 22:36:23
+Elapsed time: 0:00:01.265357
+NOTICEs: 1; WARNINGs: 1; non-fatal ERRORs: 0
+
+Thank you for using QUAST!

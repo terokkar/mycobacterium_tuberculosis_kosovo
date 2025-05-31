@@ -1,0 +1,7 @@
+- "left reads":
+  - "/Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/SRR33453552_trimmed_1P.fastq"
+  "number": !!int "1"
+  "orientation": "fr"
+  "right reads":
+  - "/Users/weeblesthe2nd/Desktop/kosovo_mtb/trimmed_reads/SRR33453552_trimmed_2P.fastq"
+  "type": "paired-end"
